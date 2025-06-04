@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools >= 80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "visualize_tools"
+version = "0.0.1"
+authors = [
+  { name="changhaoxuan23" },
+]
+description = "A set of tools for visualization"
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Environment :: Console",
+    "Environment :: GPU :: NVIDIA CUDA",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Scientific/Engineering :: Visualization",
+]
+license = "AGPL-3.0-or-later"
+license-files = ["LICEN[CS]E*"]
+dependencies = [
+  "pillow",
+  "numpy",
+]
+
+[project.optional-dependencies]
+lpips = ["torch", "torchvision"]
+
+[project.urls]
+Homepage = "https://github.com/changhaoxuan23/visualize_tools"
+Issues = "https://github.com/changhaoxuan23/visualize_tools/issues"
+
+[project.scripts]
+img-set-diff = "visualize_tools.image_set_difference:cmdline_main"
