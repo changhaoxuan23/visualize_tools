@@ -1040,8 +1040,9 @@ def _get_arguments() -> Namespace:  # noqa: C901
     message = f"either {arguments.output} is not a directory or is not empty"
     raise ValueError(message)
 
-  if arguments.font is not None:
-    arguments.font = ImageFont.truetype(arguments.font)
+  arguments.font = (
+    ImageFont.truetype(arguments.font) if arguments.font is not None else ImageFont.load_default()
+  )
 
   return arguments
 
