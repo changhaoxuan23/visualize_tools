@@ -456,7 +456,7 @@ def _render_cover3(
   lhs_sample = empty_sample.copy()
   _place_description(
     image=lhs_sample,
-    description=rhs,
+    description=lhs,
     font=font,
     line_distance=12,
     background=_TextboxBackground,
