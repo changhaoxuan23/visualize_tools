@@ -1001,6 +1001,100 @@ def _get_arguments() -> Namespace:  # noqa: C901
     "TrueType font is recommended and expected.",
     type=str,
   )
+  argument_parser.add_argument(
+    "-e",
+    "--expression",
+    help="Expression to specify exactly how each image should be visualized."
+    " The syntax is somehow complicated but powerful enough for most cases.\n"
+    "An expression consists of one or more sub-expression, separated with semicolons(;), while the tailing"
+    " semicolon is optional.\n"
+    "Each sub-expression looks like a pipe in bash: starting with a data source, followed by several"
+    " (optional) operations as a sequence and a destination to store the result, either a position on the"
+    " resulting image or a name (variable).\n"
+    "A data source is something that produces a value. It can be a variable reference, a path reference,"
+    " a function call, an immediate value or an indirect value.\n"
+    " Only image and array can be stored as variables. To reference a variable, a variable reference should"
+    " be used which looks like image:<name> or array:<name> according to the actual value type stored, where"
+    ' name shall not be empty and shall be matched by the regular expression "[a-zA-Z_][0-9a-zA-Z_]*".'
+    " Specially, images from sets specified including the reference one are available as predefined"
+    " variables: assume that images, following the order they are specified, are arranged into a list. Valid"
+    " index can be used as names to reference there images, so image:0 will give you access to current image"
+    " from the first image set, image:1 from the second, and so on. Note that the reference set is appended"
+    " as the last item in the list if one is specified, and you may access current reference image with"
+    " image:-1. Yes, negative indexes do work.\n"
+    " Only image files can be referenced by a path reference and such references will result in a value of"
+    ' type image. A path reference looks like image@:"<path>", where the path can be either relative or'
+    " absolute. %n in the path will be replaced by the stem of current image, that is its filename without"
+    " the suffix part, and %N by the full filename. Names of the image sets can be accessed with %<index>,"
+    " where index have the same meaning as in image:<index>. Since we use '|' as the separator of entries"
+    ' in a pipe, use %I instead in the path; similarly, use %J for ". To include a plain %, use %% instead.'
+    " These are the only escaping sequences supported.\n"
+    " A function call looks like what you will usually expect: <function-name>(<argument>, ...). Each"
+    " argument shall be a valid data source. Note that as a side case, path references with certain"
+    " characters in it may cause problem when used as arguments, you can first store them as variables and"
+    " then reference then with variable references. Functions that accepts least one argument can be used"
+    " not only as a reference, but also in the middle of a pipe as an operation. In this case, the result"
+    " from the last entry in the same pipe will be passed as its first argument. Functions available will"
+    " be listed below\n"
+    "  abs(value: array) -> array: calculate the per-element absolute of the array\n"
+    '  metrics(lhs: image, rhs: image, name: str = "") -> metric_t: calculate metrics between lhs and rhs as'
+    " specified by commandline arguments. If name is not empty, result will be included in summary."
+    " If exactly one instance of metrics with nonempty name is supplied, the name is ignored and"
+    " the summary will be generated as if 2 image sets are supplied to v0.0.3; otherwise, if two or more "
+    " instances exist, the summary will show metrical result for each instance with a percentage value taking"
+    " the result of first instance as 100%. Obviously enough, if all calls to metrics have an empty name, no"
+    " summary will be generated at all.\n"
+    "  to_string(value: metric_t) -> str: convert metric_t into a string, one metric per line.\n"
+    "  to_image(string: str) -> image: render string into an image. Since all other images should share the"
+    " same shape, the target size of rendered image will be calculated automatically.\n"
+    "  to_difference_image(value: array) -> image: treat value as a difference and render a difference map.\n"
+    "  to_aligned_difference_image(value: array) -> image: treat value as a difference and render a globally"
+    " aligned difference map.\n"
+    "  to_comparison_image(value: array) -> image: treat value as a comparison and render a comparison map.\n"
+    "  to_aligned_comparison_image(value: array) -> image: treat value as a comparison and render a globally"
+    " aligned comparison map.\n"
+    "  blend(lhs: image, rhs: image, alpha: float = 0.4) -> image: blend the rhs image over lhs one with"
+    " alpha. If these images have different size, lhs shall not be smaller than rhs on both dimensions, and"
+    " rhs image will be placed at the top-left corner of lhs.\n"
+    " A immediate value can be a number, be it a floating point or a fixed point one, or a string. A number"
+    " can be in any form that int() or float() in Python can parse with the exception that prefixing '+' for"
+    ' positive numbers is not allowed, and a string must be properly enclosed by a pair of "". All'
+    " replacement sequences available in path references are also available here.\n"
+    "Each value has a type. Some operations (operators) are defined for operands with certain type, which"
+    " are listed below. All items listed below form a indirect value.\n"
+    " image - image -> array: subtracting an image from another one produces an array which contains the"
+    " per-pixel and per-channel difference. The resulting array will have shape (height, width, channels)\n"
+    " str + str -> str: adding string to another one will produce a new string whose content is the content"
+    " of the first operand, followed by A LINE BREAK, then by the content of the second operand.\n"
+    " array - array -> array: simple subtraction.\n"
+    "An operation in the middle of a pipe can be a function call, which have already been detailed.\n"
+    "A destination terminates a pipe, which can be a position specification or a variable specification. The"
+    " result of last entry in the same pipe must have image type or array type.\n"
+    " A position specification looks like [<row>, <column>], where row and column are nonnegative integers"
+    " specifying the chunk to paste the result to the visualized image. The visualized image is separated"
+    " into grids with same height and width as images in image sets, and this specification is used to index"
+    " the chunk to place the resulting image. row and column start with 0, indexing the top-left chunk. When"
+    " position specification is used, the result of last entry must have image type.\n"
+    " A variable specification stores the resulting image as a variable, which looks like to:<name>.\n"
+    "Examples:\n"
+    "Specifying two image sets and a reference image set without a custom expression will make this program"
+    " work as if the following expression is specified:\n"
+    ' image:0 | blend(to_image("%0" + to_string(metrics(image:0, image:2)))) | [1, 0];\n'
+    ' image:1 | blend(to_image("%1" + to_string(metrics(image:1, image:2)))) | [0, 1];\n'
+    " image:2 | [1, 1];\n"
+    " abs(image:0 - image:2) | to:lhs;\n"
+    " abs(image:1 - image:2) | to:rhs;\n"
+    " array:lhs - array:rhs | to:diff;\n"
+    ' to_aligned_comparison_image(array:diff) | blend(to_image("%0 vs %1")) | [0, 0];\n'
+    ' to_aligned_difference_image(array:lhs) | blend(to_image("%0 vs %2")) | [2, 0];\n'
+    ' to_aligned_difference_image(array:rhs) | blend(to_image("%1 vs %2")) | [0, 2];\n'
+    " to_comparison_image(array:diff) | [2, 2];\n"
+    " to_difference_image(array:lhs) | [1, 2];\n"
+    " to_difference_image(array:rhs) | [2, 1];\n"
+    "By the way, this is the maximum number of image sets you can specify without your own expression. Note"
+    " that this will not produce the cover page or summary page as what v0.0.3 does.",
+    type=str,
+  )
   argument_parser.add_argument("images", help="Image set(s) to visualize.", nargs="+", type=Path)
   arguments = argument_parser.parse_args()
 
